@@ -1,0 +1,21 @@
+import torch.multiprocessing as mp
+
+def PGM_feature_generation(opt):
+  video_dict=getDatasetDict(opt)
+  video_list=video_dict.keys()
+  num_videos = len(video_list)
+  num_videos_per_thread = num_videos/opt["pgm_thread"]  # pgm_thread == 8  在这种不涉及GPU计算的过程中才会添加多线程技术？
+  processes = []
+  for tid in range(opt["pgm_thread"]-1):
+      tmp_video_list = video_list[tid*num_videos_per_thread:(tid+1)*num_videos_per_thread]
+      p = mp.Process(target = generateFeature,args =(opt,tmp_video_list,video_dict,))
+      p.start()
+      processes.append(p)
+
+  tmp_video_list = video_list[(opt["pgm_thread"]-1)*num_videos_per_thread:]
+  p = mp.Process(target = generateFeature,args =(opt,tmp_video_list,video_dict,))
+  p.start()
+  processes.append(p)
+
+  for p in processes:
+      p.join()
